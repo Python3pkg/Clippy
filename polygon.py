@@ -364,105 +364,193 @@ class Polygon(object):
         #  MAYBE ALSO DOESNT DIFFERENTIATE THE RESULT HOLES CORRECTLY, MAYBE DUE TO INSIDE TESTS
         #  AND MAYBE GETS STUCK IN ENDLESS LOOP IF TOO MANY RANDOM POLYGON VERTICES, BUT NEED TO CHECK OUT IF IT'S THE AMOUNT OF VERTICES OR JUST UNSUPPORTED SELFINTERSECTIONS
 
-        firstloc = testLocation(self.first, clip)
-        s_entry ^= firstloc in ("in","on")
-        print "starts as ",s_entry
+        # based on Forster, start by looping both subj and clip and marking each vertex location
         for s in self.iter():
+            s.loc = testLocation(s, clip)
+        for c in clip.iter():
+            c.loc = testLocation(c, self)
+            
+        # proceed to loop subj, marking as entry or exit, and potentially changing the location flags
+        for s in self.iter():
+            
             if s.intersect:
-                print "intersection"
-                print "\t",s
-                if s.degen:
-                    # intersection is degenerate, is the start/endpoint of a line
-                    # so maybe delete intersection flag based on prev/next locations
-                    #MAYBE DO (http://stackoverflow.com/questions/23412973/greiner-hormann-clipping-with-degeneracies)
-                    #if the intersection is in->on:
-                    #    if both the neighbor and current is in->on:
-                    #        we would want to check the next point in the sequence
-                    #        If both points in the sequence are on:
-                    #            remove this intersection and label as (in,in)
-                    #        elif nextpoint is in:
-                    #            the label should be en
-                    #        elif nextpoint is out:
-                    #            label ex
-                    #    else:
-                    #        label the current as the opposite of the neighbor
+                
+                def mark(s):
 
-                    # test prev-next locations
-                    prevloc = testLocation(s.prev, clip)
-                    nextloc = testLocation(s.next, clip)
-                    prevloc_nei = testLocation(s.neighbour.prev, clip)
-                    nextloc_nei = testLocation(s.neighbour.next, clip)
-                    if prevloc == "on" or nextloc == "on":
-                        prevmid = Vertex(((s.x+s.prev.x)/2.0,(s.y+s.prev.y)/2.0))
-                        prevloc = testLocation(prevmid, clip)
-                        nextmid = Vertex(((s.x+s.next.x)/2.0,(s.y+s.next.y)/2.0))
-                        nextloc = testLocation(nextmid, clip)
-                        prevmid_nei = Vertex(((s.neighbour.x+s.neighbour.prev.x)/2.0,(s.neighbour.y+s.neighbour.prev.y)/2.0))
-                        prevloc_nei = testLocation(prevmid_nei, clip)
-                        nextmid_nei = Vertex(((s.neighbour.x+s.neighbour.next.x)/2.0,(s.neighbour.y+s.neighbour.next.y)/2.0))
-                        nextloc_nei = testLocation(nextmid_nei, clip)
-                    print "\t %s -> degenintsec -> %s" %(prevloc,nextloc)
+                    curlocs = (s.prev.loc,s.next.loc)
+                    neighlocs = (s.neighbour.prev.loc,s.neighbour.next.loc)
                     
-                    # remove intersection if only tangent
-                    if prevloc == "out" and nextloc == "out":
-                        if (prevloc_nei == "out" and nextloc_nei == "out") or (prevloc_nei == "in" and nextloc_nei == "in"):
+                    # in in
+                    if curlocs == ("in","in"):
+                        if neighlocs == ("in","in")\
+                           or neighlocs == ("out","out")\
+                           or neighlocs == ("on","on"):
                             s.intersect = False
-                            s.neighbour.intersect = False
                         else:
-                            raise Exception("this shouldnt be possible...")
-                    elif prevloc == "in" and nextloc == "in":
-                        if (prevloc_nei == "out" and nextloc_nei == "out"):
-                            s.intersect = False
-                            s.neighbour.intersect = False
-                        else:
-                            raise Exception("this shouldnt be possible...")
-                    elif prevloc == "on" and nextloc == "on":
-                        if (prevloc_nei == "on" and nextloc_nei == "on"):
-                            s.intersect = False
-                            s.neighbour.intersect = False
-                        else:
-                            raise Exception("this shouldnt be possible...")
-                        
-                    #for current
-                    if s.intersect:
-                        if prevloc == "out":
-                            if nextloc == "in" or nextloc == "on":
-                                s.entry = s_entry
-                        elif prevloc == "in":
-                            if nextloc == "out" or nextloc == "on":
-                                s.entry = not s_entry
-                        elif prevloc == "on":
-                            if nextloc == "in":
-                                s.entry = s_entry
-                            elif nextloc == "out":
-                                s.entry = not s_entry
+                            s.entry = True
                             
-                    #same for neighbour
-                    if s.neighbour.intersect:
-                        if prevloc_nei == "out":
-                            if nextloc_nei == "in" or nextloc_nei == "on":
-                                s.neighbour.entry = s_entry
-                        elif prevloc_nei == "in":
-                            if nextloc_nei == "out" or nextloc_nei == "on":
-                                s.neighbour.entry = not s_entry
-                        elif prevloc_nei == "on":
-                            if nextloc_nei == "in":
-                                s.neighbour.entry = s_entry
-                            elif nextloc_nei == "out":
-                                s.neighbour.entry = not s_entry
+                    # out out
+                    elif curlocs == ("out","out"):
+                        if neighlocs == ("in","in")\
+                           or neighlocs == ("out","out")\
+                           or neighlocs == ("on","on"):
+                            s.intersect = False
+                        else:
+                           s.entry = False
+                           
+                    # on on
+                    elif curlocs == ("on","on"):
+                        if neighlocs == ("in","in")\
+                           or neighlocs == ("out","out")\
+                           or neighlocs == ("on","on"):
+                            s.intersect = False
+                        else:
+                            # label opposite of neighbour
+                            # NOTE: this is not specified in the article,
+                            # but one cannot take the opposite of the neighbour's entry flag
+                            # if the neighbour hasn't been marked yet,
+                            # thus the decision to mark the neighbour first
+                            mark(s.neighbour)
+                            s.entry = not s.neighbour
 
-                    #then make sure curr and neighbour dont have same flags
-                    if s.intersect and s.neighbour.intersect:
-                        if s.entry and s.neighbour.entry:
-                            s.intersect = False
-                            s.neighbour.intersect = False
-                            #raise Exception("curr and nei have same en flags, no support for this scenario yet")
-                            #somehow mark as .in = True...??
-                        elif not s.entry and not s.neighbour.entry:
-                            s.intersect = False
-                            s.neighbour.intersect = False
-                            #raise Exception("curr and nei have same ex flags, no support for this scenario yet")
-                            #somehow mark as .in = False...??
+                    # partial exit
+                    elif curlocs == ("in","on")\
+                         or curlocs == ("on","out"):
+                        s.entry = False
+
+                    # partial entry
+                    elif curlocs == ("on","in")\
+                         or curlocs == ("out","on"):
+                        s.entry = True
+
+                    # normal exit
+                    elif curlocs == ("in","out"):
+                        s.entry = False
+
+                    # normal entry
+                    elif curlocs == ("out","in"):
+                        s.entry = True
+
+                # mark curr
+                mark(s)
+
+                # mark neighbour
+                # NOTE: the algorithm explained in the article only explains
+                # how to mark the main subject polygon, but never says how
+                # to mark the neighbour, so just using the same procedure
+                mark(s.neighbour)
+
+                # finally make sure curr and neighbour dont have same flags
+                if s.intersect and s.neighbour.intersect:
+                    if s.entry and s.neighbour.entry:
+                        s.intersect = False
+                        s.neighbour.intersect = False
+                        s.loc = "in"
+                    elif not s.entry and not s.neighbour.entry:
+                        s.intersect = False
+                        s.neighbour.intersect = False
+                        s.loc = "out"
+                
+##        #RECENT DEADEND HYBRID
+##        firstloc = testLocation(self.first, clip)
+##        s_entry ^= firstloc in ("in","on")
+##        print "starts as ",s_entry
+##        for s in self.iter():
+##            if s.intersect:
+##                print "intersection"
+##                print "\t",s
+##                if s.degen:
+##                    # intersection is degenerate, is the start/endpoint of a line
+##                    # so maybe delete intersection flag based on prev/next locations
+##                    #MAYBE DO (http://stackoverflow.com/questions/23412973/greiner-hormann-clipping-with-degeneracies)
+##                    #if the intersection is in->on:
+##                    #    if both the neighbor and current is in->on:
+##                    #        we would want to check the next point in the sequence
+##                    #        If both points in the sequence are on:
+##                    #            remove this intersection and label as (in,in)
+##                    #        elif nextpoint is in:
+##                    #            the label should be en
+##                    #        elif nextpoint is out:
+##                    #            label ex
+##                    #    else:
+##                    #        label the current as the opposite of the neighbor
+##
+##                    # test prev-next locations
+##                    prevloc = testLocation(s.prev, clip)
+##                    nextloc = testLocation(s.next, clip)
+##                    prevloc_nei = testLocation(s.neighbour.prev, clip)
+##                    nextloc_nei = testLocation(s.neighbour.next, clip)
+##                    if prevloc == "on" or nextloc == "on":
+##                        prevmid = Vertex(((s.x+s.prev.x)/2.0,(s.y+s.prev.y)/2.0))
+##                        prevloc = testLocation(prevmid, clip)
+##                        nextmid = Vertex(((s.x+s.next.x)/2.0,(s.y+s.next.y)/2.0))
+##                        nextloc = testLocation(nextmid, clip)
+##                        prevmid_nei = Vertex(((s.neighbour.x+s.neighbour.prev.x)/2.0,(s.neighbour.y+s.neighbour.prev.y)/2.0))
+##                        prevloc_nei = testLocation(prevmid_nei, clip)
+##                        nextmid_nei = Vertex(((s.neighbour.x+s.neighbour.next.x)/2.0,(s.neighbour.y+s.neighbour.next.y)/2.0))
+##                        nextloc_nei = testLocation(nextmid_nei, clip)
+##                    print "\t %s -> degenintsec -> %s" %(prevloc,nextloc)
+##                    
+##                    # remove intersection if only tangent
+##                    if prevloc == "out" and nextloc == "out":
+##                        if (prevloc_nei == "out" and nextloc_nei == "out") or (prevloc_nei == "in" and nextloc_nei == "in"):
+##                            s.intersect = False
+##                            s.neighbour.intersect = False
+##                        else:
+##                            raise Exception("this shouldnt be possible...")
+##                    elif prevloc == "in" and nextloc == "in":
+##                        if (prevloc_nei == "out" and nextloc_nei == "out"):
+##                            s.intersect = False
+##                            s.neighbour.intersect = False
+##                        else:
+##                            raise Exception("this shouldnt be possible...")
+##                    elif prevloc == "on" and nextloc == "on":
+##                        if (prevloc_nei == "on" and nextloc_nei == "on"):
+##                            s.intersect = False
+##                            s.neighbour.intersect = False
+##                        else:
+##                            raise Exception("this shouldnt be possible...")
+##                        
+##                    #for current
+##                    if s.intersect:
+##                        if prevloc == "out":
+##                            if nextloc == "in" or nextloc == "on":
+##                                s.entry = s_entry
+##                        elif prevloc == "in":
+##                            if nextloc == "out" or nextloc == "on":
+##                                s.entry = not s_entry
+##                        elif prevloc == "on":
+##                            if nextloc == "in":
+##                                s.entry = s_entry
+##                            elif nextloc == "out":
+##                                s.entry = not s_entry
+##                            
+##                    #same for neighbour
+##                    if s.neighbour.intersect:
+##                        if prevloc_nei == "out":
+##                            if nextloc_nei == "in" or nextloc_nei == "on":
+##                                s.neighbour.entry = s_entry
+##                        elif prevloc_nei == "in":
+##                            if nextloc_nei == "out" or nextloc_nei == "on":
+##                                s.neighbour.entry = not s_entry
+##                        elif prevloc_nei == "on":
+##                            if nextloc_nei == "in":
+##                                s.neighbour.entry = s_entry
+##                            elif nextloc_nei == "out":
+##                                s.neighbour.entry = not s_entry
+##
+##                    #then make sure curr and neighbour dont have same flags
+##                    if s.intersect and s.neighbour.intersect:
+##                        if s.entry and s.neighbour.entry:
+##                            s.intersect = False
+##                            s.neighbour.intersect = False
+##                            #raise Exception("curr and nei have same en flags, no support for this scenario yet")
+##                            #somehow mark as .in = True...??
+##                        elif not s.entry and not s.neighbour.entry:
+##                            s.intersect = False
+##                            s.neighbour.intersect = False
+##                            #raise Exception("curr and nei have same ex flags, no support for this scenario yet")
+##                            #somehow mark as .in = False...??
 
                     #OLD VERSION
 ##                    if prevloc == "out":
@@ -495,14 +583,14 @@ class Polygon(object):
 ##                        print "\t entering = ", s_entry
 ##                        s.entry = s_entry
 ##                        s_entry = not s_entry
-                else:
-                    #normal intersection, so set and toggle entry flag
-                    print "\t entering = ", s_entry
-                    s.entry = s_entry
-                    s_entry = not s_entry
-            else:
-                print "vertex"
-                print "\t",s
+##                else:
+##                    #normal intersection, so set and toggle entry flag
+##                    print "\t entering = ", s_entry
+##                    s.entry = s_entry
+##                    s_entry = not s_entry
+##            else:
+##                print "vertex"
+##                print "\t",s
                 
         # then do same for clip polygon
         # BUT NOT NEEDED IN NEW VERSION
