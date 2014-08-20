@@ -232,18 +232,12 @@ class Polygon(object):
             if not s.intersect:
                 for c in clip.iter(): # for each vertex Cj of clip polygon do
                     if not c.intersect:
-                        if (s.x == 0.0 and s.y == 0.0) and (s.next.x == 6.0 and s.next.y == 0.0):
-                            print "1-6", s, self.next(s.next), c, clip.next(c.next)
-                        if (c.x == 1.0 and c.y == 6.0) and (c.next.x == 1.0 and c.next.y == 0.0):
-                            print "norm", s, self.next(s.next), c, clip.next(c.next)
-                            
                         try:
                             i, alphaS, alphaC = intersect_or_on(s, self.next(s.next),
                                                           c, clip.next(c.next))
 
                             s_between = (0 < alphaS < 1)
                             c_between = (0 < alphaC < 1)
-                            #print s, self.next(s.next), c, clip.next(c.next)
                             if s_between and c_between:
                                 #both subj and clip intersect each other somewhere in the middle
                                 iS = Vertex(i, alphaS, intersect=True, entry=False)
@@ -574,21 +568,14 @@ def intersect_or_on(s1, s2, c1, c2):
     dx = c1.x - s1.x
     dy = c1.y - s1.y
     den = float( (s2.x - s1.x)*(c2.y - c1.y) - (s2.y - s1.y)*(c2.x - c1.x) )
-    if (c1.x == 1.0 and c1.y == 6.0) and (c2.x == 1.0 and c2.y == 0.0):
-        print "anyden",s1, s2, c1, c2
     if not den:
-        if (c1.x == 1.0 and c1.y == 6.0) and (c2.x == 1.0 and c2.y == 0.0):
-            print "zeroden",s1, s2, c1, c2
         # paralell lines, even if ontop of eachother
         return None
 
     us = (dx * (c2.y-c1.y) - dy * (c2.x-c1.x) ) / den
     uc = (dx * (s2.y-s1.y) - dy * (s2.x-s1.x) ) / den
 
-    if (0 <= us <= 1) and (0 <= uc <= 1):
-        if (c1.x == 1.0 and c1.y == 6.0) and (c2.x == 1.0 and c2.y == 0.0):
-            print "fullden",s1, s2, c1, c2
-            print us, uc
+    if (0 < us < 1) or (0 < uc < 1):
         #subj and clip line intersect eachother somewhere in the middle
         #this includes the possibility of degenerates (edge intersections)
         x = s1.x + us * (s2.x - s1.x)
@@ -596,9 +583,6 @@ def intersect_or_on(s1, s2, c1, c2):
         return (x, y), us, uc
     else:
         # not in between endpoints
-        if (c1.x == 1.0 and c1.y == 6.0) and (c2.x == 1.0 and c2.y == 0.0):
-            print "afterden",s1, s2, c1, c2
-            print us, uc
         return None
 
 def testLocation(point, polygon):
@@ -747,9 +731,20 @@ if __name__ == "__main__":
     # random polygon
     #clippoly = [(random.randrange(0,10),random.randrange(0,10)) for _ in xrange(10)] #random
     #run operation
+    s1 = Vertex((0,0))
+    s2 = Vertex((6,0))
+    s1.prev,s1.next = (s2,s2)
+    s2.prev,s2.next = (s1,s1)
+    c1 = Vertex((1,6))
+    c2 = Vertex((1,0))
+    c1.prev,c1.next = (c2,c2)
+    c2.prev,c2.next = (c1,c1)
+    print "hmm",intersect_or_on(s1,s2,c1,c2)
+    print ""
+    
     import time
     t = time.time()
-    resultpolys = clip_polygon(subjpoly,clippoly,"intersection")
+    resultpolys = clip_polygon(subjpoly,clippoly,"union")
     print "finished:",resultpolys,time.time()-t
     import pydraw
     crs = pydraw.CoordinateSystem([-1,-1,11,11])

@@ -375,80 +375,164 @@ class Polygon(object):
             
             if s.intersect:
                 
-                def mark(s):
-
-                    curlocs = (s.prev.loc,s.next.loc)
-                    neighlocs = (s.neighbour.prev.loc,s.neighbour.next.loc)
-                    
-                    # in in
-                    if curlocs == ("in","in"):
-                        if neighlocs == ("in","in")\
-                           or neighlocs == ("out","out")\
-                           or neighlocs == ("on","on"):
-                            s.intersect = False
+                def mark(current):
+                    neighbour = current.neighbour
+                    #on/on
+                    if current.prev.loc == "on" and current.next.loc == "on":
+                      #Determine what to do based on the neighbour
+                      #en tag is the opposite of the neighbour's en tag 
+                      if neighbour.prev.loc == "on" and neighbour.next.loc == "on":
+                          current.intersect = False
+                          if neighbour.loc == "in": current.loc = "out"
+                          elif neighbour.loc == "out": current.loc = "in"
+                          #neighbour.entry = True
+                      elif neighbour.prev.loc == "on" and neighbour.next.loc == "out":
+                          current.entry = True
+                          current.loc = "in"
+                      elif neighbour.prev.loc == "on" and neighbour.next.loc == "in":
+                          current.entry = False
+                          current.loc = "in"
+                      elif neighbour.prev.loc == "out" and neighbour.next.loc == "on":
+                          current.entry = False
+                          current.loc = "in"
+                      elif neighbour.prev.loc == "out" and neighbour.next.loc == "out":
+                          current.intersect = False
+                          if neighbour.loc == "in": current.loc = "out"
+                          elif neighbour.loc == "out": current.loc = "in"
+                          #neighbour.entry = False
+                      elif neighbour.prev.loc == "out" and neighbour.next.loc == "in":
+                          current.entry = False
+                          current.loc = "in"
+                      elif neighbour.prev.loc == "in" and neighbour.next.loc == "on":
+                          current.entry = True
+                          current.loc = "in"
+                      elif neighbour.prev.loc == "in" and neighbour.next.loc == "out":
+                          current.entry = True
+                          current.loc = "in"
+                      elif neighbour.prev.loc == "in" and neighbour.next.loc == "in":
+                          current.intersect = False
+                          if neighbour.loc == "in": current.loc = "out"
+                          elif neighbour.loc == "out": current.loc = "in"
+                          #neighbour.entry = True
+                    #on/out
+                    elif current.prev.loc == "on" and current.next.loc == "out":
+                        current.entry = False
+                    #on/in  
+                    elif current.prev.loc == "on" and current.next.loc == "in":
+                        current.entry = True
+                    #out/on  
+                    elif current.prev.loc == "out" and current.next.loc == "on":
+                        current.entry = True
+                    #out/out  
+                    elif current.prev.loc == "out" and current.next.loc == "out":
+                        if neighbour.prev.loc == "on" and neighbour.next.loc == "on":
+                            current.intersect = False
+                            current.loc = "out"
+                            #neighbour.entry = True
+                        elif neighbour.prev.loc == neighbour.next.loc == "out" or neighbour.prev.loc == neighbour.next.loc == "in":
+                            current.intersect = False
+                            current.loc = "out"
                         else:
-                            s.entry = True
-                            
-                    # out out
-                    elif curlocs == ("out","out"):
-                        if neighlocs == ("in","in")\
-                           or neighlocs == ("out","out")\
-                           or neighlocs == ("on","on"):
-                            s.intersect = False
+                            if neighbour.prev.loc == "on" and neighbour.next.loc == "out":
+                                current.entry = True
+                            else:
+                                current.entry = False
+                    #out/in  
+                    elif current.prev.loc == "out" and current.next.loc == "in":
+                        current.entry = True
+                    #in/on
+                    elif current.prev.loc == "in" and current.next.loc == "on":
+                        current.entry = False
+                    #in/out
+                    elif current.prev.loc == "in" and current.next.loc == "out":
+                        current.entry = False
+                    #in/in
+                    elif current.prev.loc == "in" and current.next.loc == "in":
+                        if neighbour.prev.loc == "on" and neighbour.next.loc == "on":
+                            current.intersect = False
+                            current.loc = "in"
+                            #neighbour.entry = False
+                        elif neighbour.prev.loc == neighbour.next.loc == "out" or neighbour.prev.loc == neighbour.next.loc == "in":
+                            current.intersect = False
+                            current.loc = "in"
                         else:
-                           s.entry = False
-                           
-                    # on on
-                    elif curlocs == ("on","on"):
-                        if neighlocs == ("in","in")\
-                           or neighlocs == ("out","out")\
-                           or neighlocs == ("on","on"):
-                            s.intersect = False
-                        else:
-                            # label opposite of neighbour
-                            # NOTE: this is not specified in the article,
-                            # but one cannot take the opposite of the neighbour's entry flag
-                            # if the neighbour hasn't been marked yet,
-                            # thus the decision to mark the neighbour first
-                            mark(s.neighbour)
-                            s.entry = not s.neighbour
+                            if neighbour.prev.loc == "in" and neighbour.next.loc == "out":
+                                current.entry = True
+                            else:
+                                current.entry = False
 
-                    # partial exit
-                    elif curlocs == ("in","on")\
-                         or curlocs == ("on","out"):
-                        s.entry = False
-
-                    # partial entry
-                    elif curlocs == ("on","in")\
-                         or curlocs == ("out","on"):
-                        s.entry = True
-
-                    # normal exit
-                    elif curlocs == ("in","out"):
-                        s.entry = False
-
-                    # normal entry
-                    elif curlocs == ("out","in"):
-                        s.entry = True
+##                def mark(s):
+##
+##                    curlocs = (s.prev.loc,s.next.loc)
+##                    neighlocs = (s.neighbour.prev.loc,s.neighbour.next.loc)
+##                    
+##                    # in in
+##                    if curlocs == ("in","in"):
+##                        if neighlocs == ("in","in")\
+##                           or neighlocs == ("out","out")\
+##                           or neighlocs == ("on","on"):
+##                            s.intersect = False
+##                        else:
+##                            s.entry = True
+##                            
+##                    # out out
+##                    elif curlocs == ("out","out"):
+##                        if neighlocs == ("in","in")\
+##                           or neighlocs == ("out","out")\
+##                           or neighlocs == ("on","on"):
+##                            s.intersect = False
+##                        else:
+##                           s.entry = False
+##                           
+##                    # on on
+##                    elif curlocs == ("on","on"):
+##                        if neighlocs == ("in","in")\
+##                           or neighlocs == ("out","out")\
+##                           or neighlocs == ("on","on"):
+##                            s.intersect = False
+##                        else:
+##                            # label opposite of neighbour
+##                            # NOTE: this is not specified in the article,
+##                            # but one cannot take the opposite of the neighbour's entry flag
+##                            # if the neighbour hasn't been marked yet,
+##                            # thus the decision to mark the neighbour first
+##                            mark(s.neighbour)
+##                            s.entry = not s.neighbour
+##
+##                    # partial exit
+##                    elif curlocs == ("in","on")\
+##                         or curlocs == ("on","out"):
+##                        s.entry = False
+##
+##                    # partial entry
+##                    elif curlocs == ("on","in")\
+##                         or curlocs == ("out","on"):
+##                        s.entry = True
+##
+##                    # normal exit
+##                    elif curlocs == ("in","out"):
+##                        s.entry = False
+##
+##                    # normal entry
+##                    elif curlocs == ("out","in"):
+##                        s.entry = True
 
                 # mark curr
                 mark(s)
 
-                # mark neighbour
-                # NOTE: the algorithm explained in the article only explains
-                # how to mark the main subject polygon, but never says how
-                # to mark the neighbour, so just using the same procedure
-                mark(s.neighbour)
+##                # mark neighbour
+##                # NOTE: the algorithm explained in the article only explains
+##                # how to mark the main subject polygon, but never says how
+##                # to mark the neighbour, so just using the same procedure
+##                mark(s.neighbour)
 
                 # finally make sure curr and neighbour dont have same flags
                 if s.intersect and s.neighbour.intersect:
                     if s.entry and s.neighbour.entry:
                         s.intersect = False
-                        s.neighbour.intersect = False
                         s.loc = "in"
                     elif not s.entry and not s.neighbour.entry:
                         s.intersect = False
-                        s.neighbour.intersect = False
                         s.loc = "out"
                 
 ##        #RECENT DEADEND HYBRID
