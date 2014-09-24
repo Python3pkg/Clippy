@@ -1,0 +1,5 @@
+maybe do
+
+- fix insert intersections so it does all building new polys from scratch, instead of skipping the ones already inserted.
+- account for polys right next to each other if intersectmode, bc will make small artifact but shouldnt be any results...
+- 

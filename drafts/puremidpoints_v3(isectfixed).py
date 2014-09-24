@@ -366,43 +366,62 @@ class Polygon(object):
         #  MAYBE ALSO DOESNT DIFFERENTIATE THE RESULT HOLES CORRECTLY, MAYBE DUE TO INSIDE TESTS
         #  AND MAYBE GETS STUCK IN ENDLESS LOOP IF TOO MANY RANDOM POLYGON VERTICES, BUT NEED TO CHECK OUT IF IT'S THE AMOUNT OF VERTICES OR JUST UNSUPPORTED SELFINTERSECTIONS
 
-        firstloc = testLocation(self.first, clip)
-        s_entry ^= firstloc in ("in","on")
+        #firstloc = testLocation(self.first, clip)
+        #s_entry ^= firstloc in ("in","on")
         print "starts as ",s_entry
         for s in self.iter():
             if s.intersect:
                 print "intersection"
                 print "\t",s
-                if s.degen:
-                    # intersection is degenerate, is the start/endpoint of a line
-                    # so maybe delete intersection flag based on prev/next locations
-                    prevloc = testLocation(s.prev, clip)
-                    nextloc = testLocation(s.next, clip)
-                    if prevloc == "on" or nextloc == "on":
-                        prevmid = Vertex(((s.x+s.prev.x)/2.0,(s.y+s.prev.y)/2.0))
-                        prevloc = testLocation(prevmid, clip)
-                        nextmid = Vertex(((s.x+s.next.x)/2.0,(s.y+s.next.y)/2.0))
-                        nextloc = testLocation(nextmid, clip)
-                    print "\t %s -> degenintsec -> %s" %(prevloc,nextloc)
-                    if prevloc == "out":
-                        if nextloc == "out":
-                            #just touching
+                # intersection is degenerate, is the start/endpoint of a line
+                # so maybe delete intersection flag based on prev/next locations
+                prevloc = testLocation(s.prev, clip)
+                nextloc = testLocation(s.next, clip)
+                if prevloc == "on" or nextloc == "on":
+                    prevmid = Vertex(((s.x+s.prev.x)/2.0,(s.y+s.prev.y)/2.0))
+                    prevloc = testLocation(prevmid, clip)
+                    nextmid = Vertex(((s.x+s.next.x)/2.0,(s.y+s.next.y)/2.0))
+                    nextloc = testLocation(nextmid, clip)
+                print "\t %s -> degenintsec -> %s" %(prevloc,nextloc)
+                if prevloc == "out":
+                    if nextloc == "out":
+                        #just touching
+                        s.intersect = False
+                    elif nextloc == "in":
+                        s.entry = s_entry
+                    elif nextloc == "on":
+                        s.entry = s_entry
+                elif prevloc == "in":
+                    #union and difference should never go inside the other polygon
+                    #so this should only happen for intersectmode...
+                    if nextloc == "in":
+                        #just touching
+                        s.intersect = False
+                    elif nextloc == "out":
+                        s.entry = not s_entry
+                    elif nextloc == "on":
+                        s.entry = not s_entry
+                elif prevloc == "on":
+                    if nextloc == "on":
+                        s.intersect = False
+                    elif nextloc == "out":
+                        prev = s.prev
+                        while not prev.intersect:
+                            prev = prev.prev
+                        if prev.entry != s_entry:
                             s.intersect = False
-                        #elif nextloc == "on":
-                        #    s_entry = True
-                    elif prevloc == "in":
-                        #union and difference should never go inside the other polygon
-                        #so this should only happen for intersectmode...
-                        if nextloc == "in":
-                            #just touching
+                        else:
+                            s.entry = not s_entry
+                    elif nextloc == "in":
+                        prev = s.prev
+                        while not prev.intersect:
+                            prev = prev.prev
+                        if prev.entry == s_entry:
                             s.intersect = False
-                        #elif nextloc == "on":
-                        #    #s_entry = False
-                    elif prevloc == "on":
-                        if nextloc == "on":
-                            s.intersect = False
-                        #elif nextloc == "out":# and s_entry:
-                        #    s_entry = False
+                        else:
+                            s.entry = s_entry
+                    #elif nextloc == "out":# and s_entry:
+                    #    s_entry = False
 ##                            #looking to enter (ie came from outside) but went back out again
 ##                            if s_entry: 
 ##                                if unionmode:
@@ -411,8 +430,8 @@ class Polygon(object):
 ##                            elif not s_entry:
 ##                                if unionmode or differencemode:
 ##                                    s.intersect = False
-                        #elif nextloc == "in": #and not s_entry:
-                        #    s_entry = True
+                    #elif nextloc == "in": #and not s_entry:
+                    #    s_entry = True
 ##                            #looking to enter (ie came from outside) and indeed went in
 ##                            if s_entry: 
 ##                                if unionmode:
@@ -420,85 +439,93 @@ class Polygon(object):
 ##                            #looking to exit (ie came from inside) but went back inside again
 ##                            elif not s_entry:
 ##                                s.intersect = False
-                    #if degen wasnt deleted, set and toggle entry flag
-                    if s.intersect:
-                        print "\t entering = ", s_entry
-                        s.entry = s_entry
-                        s_entry = not s_entry
-                else:
-                    #normal intersection, so set and toggle entry flag
-                    print "\t entering = ", s_entry
-                    s.entry = s_entry
-                    s_entry = not s_entry
+                #if intersect wasnt deleted, set and toggle entry flag
+                if s.intersect:
+                    print "\t entering = ", s.entry
             else:
                 print "vertex"
                 print "\t",s
         # then do same for clip polygon
         print "---"
-        firstloc = testLocation(clip.first, self)
-        c_entry ^= firstloc in ("in","on")
+        #firstloc = testLocation(clip.first, self)
+        #c_entry ^= firstloc in ("in","on")
         print "starts as ",c_entry
         for c in clip.iter():
             if c.intersect:
                 print "intersection"
                 print "\t",c
-                if c.degen:
-                    # intersection is degenerate, is the start/endpoint of a line
-                    # so maybe delete intersection flag based on prev/next locations
-                    prevloc = testLocation(c.prev, self)
-                    nextloc = testLocation(c.next, self)
-                    if prevloc == "on" or nextloc == "on":
-                        prevmid = Vertex(((c.x+c.prev.x)/2.0,(c.y+c.prev.y)/2.0))
-                        prevloc = testLocation(prevmid, self)
-                        nextmid = Vertex(((c.x+c.next.x)/2.0,(c.y+c.next.y)/2.0))
-                        nextloc = testLocation(nextmid, self)
-                    print "\t %s -> degenintsec -> %s" %(prevloc,nextloc)
-                    if prevloc == "out":
-                        if nextloc == "out":
-                            #just touching
-                            c.intersect = False
-                        #elif nextloc == "on":
-                        #    c_entry = True
-                    elif prevloc == "in":
-                        #union and difference should never go inside the other polygon
-                        #so this should only happen for intersectmode...
-                        if nextloc == "in":
-                            #just touching
-                            c.intersect = False
-                        #elif nextloc == "on":
-                        #    c_entry = False
-                    elif prevloc == "on":
-                        if nextloc == "on":
-                            c.intersect = False
-                        #elif nextloc == "out":# and s_entry:
-                        #    c_entry = False
-##                            #looking to enter (ie came from outside) but went back out again
-##                            if c_entry: 
-##                                if unionmode:
-##                                    c.intersect = False
-##                            #looking to exit (ie came from inside) and indeed went out
-##                            elif not c_entry:
-##                                if unionmode or differencemode:
-##                                    c.intersect = False
-                        #elif nextloc == "in": #and not s_entry:
-                        #    c_entry = True
-##                            #looking to enter (ie came from outside) and indeed went in
-##                            if c_entry: 
-##                                if unionmode:
-##                                    c.intersect = False
-##                            #looking to exit (ie came from inside) but went back inside again
-##                            elif not c_entry:
-##                                c.intersect = False
-                    #if degen wasnt deleted, set and toggle entry flag
-                    if c.intersect:
-                        print "\t entering = ", c_entry
+                # intersection is degenerate, is the start/endpoint of a line
+                # so maybe delete intersection flag based on prev/next locations
+                prevloc = testLocation(c.prev, self)
+                nextloc = testLocation(c.next, self)
+                if prevloc == "on" or nextloc == "on":
+                    prevmid = Vertex(((c.x+c.prev.x)/2.0,(c.y+c.prev.y)/2.0))
+                    prevloc = testLocation(prevmid, self)
+                    nextmid = Vertex(((c.x+c.next.x)/2.0,(c.y+c.next.y)/2.0))
+                    nextloc = testLocation(nextmid, self)
+                print "\t %s -> degenintsec -> %s" %(prevloc,nextloc)
+                if prevloc == "out":
+                    if nextloc == "out":
+                        #just touching
+                        c.intersect = False
+                    elif nextloc == "in":
                         c.entry = c_entry
-                        c_entry = not c_entry
-                else:
-                    #normal intersection, so set and toggle entry flag
-                    print "\t entering = ", c_entry
-                    c.entry = c_entry
-                    c_entry = not c_entry
+                    elif nextloc == "on":
+                        c.entry = c_entry
+                elif prevloc == "in":
+                    #union and difference should never go inside the other polygon
+                    #so this should only happen for intersectmode...
+                    if nextloc == "in":
+                        #just touching
+                        c.intersect = False
+                    elif nextloc == "out":
+                        c.entry = not c_entry
+                    elif nextloc == "on":
+                        c.entry = not c_entry
+                elif prevloc == "on":
+                    if nextloc == "on":
+                        c.intersect = False
+                    elif nextloc == "out":
+                        prev = c.prev
+                        while not prev.intersect:
+                            prev = prev.prev
+                        if prev.entry != c_entry:
+                            c.intersect = False
+                        else:
+                            c.entry = not c_entry
+                    elif nextloc == "in":
+                        prev = c.prev
+                        while not prev.intersect:
+                            prev = prev.prev
+                        if prev.entry == c_entry:
+                            c.intersect = False
+                        else:
+                            c.entry = c_entry
+                    #elif nextloc == "out":# and s_entry:
+                    #    s_entry = False
+##                            #looking to enter (ie came from outside) but went back out again
+##                            if s_entry: 
+##                                if unionmode:
+##                                    s.intersect = False
+##                            #looking to exit (ie came from inside) and indeed went out
+##                            elif not s_entry:
+##                                if unionmode or differencemode:
+##                                    s.intersect = False
+                    #elif nextloc == "in": #and not s_entry:
+                    #    s_entry = True
+##                            #looking to enter (ie came from outside) and indeed went in
+##                            if s_entry: 
+##                                if unionmode:
+##                                    s.intersect = False
+##                            #looking to exit (ie came from inside) but went back inside again
+##                            elif not s_entry:
+##                                s.intersect = False
+                #if intersect wasnt deleted, set and toggle entry flag
+                if c.intersect:
+                    print "\t entering = ", c.entry
+                    # check if neighbours have same entry flag
+                    #if c.entry == c.neighbour.entry:
+                    #    c.neighbour.intersect = False
             else:
                 print "vertex"
                 print "\t",c
@@ -604,24 +631,20 @@ def intersect_or_on(s1, s2, c1, c2):
     """Same as intersect(), except returns
     intersection even if degenerate.
     """
-    dx = c1.x - s1.x
-    dy = c1.y - s1.y
-    den = float( (s2.x - s1.x)*(c2.y - c1.y) - (s2.y - s1.y)*(c2.x - c1.x) )
+    den = float( (c2.y - c1.y) * (s2.x - s1.x) - (c2.x - c1.x) * (s2.y - s1.y) )
     if not den:
-        # paralell lines, even if ontop of eachother
         return None
 
-    us = (dx * (c2.y-c1.y) - dy * (c2.x-c1.x) ) / den
-    uc = (dx * (s2.y-s1.y) - dy * (s2.x-s1.x) ) / den
+    us = ((c2.x - c1.x) * (s1.y - c1.y) - (c2.y - c1.y) * (s1.x - c1.x)) / den
+    uc = ((s2.x - s1.x) * (s1.y - c1.y) - (s2.y - s1.y) * (s1.x - c1.x)) / den
 
-    if (0 < us < 1) or (0 < uc < 1):
+    if (0 <= us <= 1) and (0 <= uc <= 1):
         #subj and clip line intersect eachother somewhere in the middle
         #this includes the possibility of degenerates (edge intersections)
         x = s1.x + us * (s2.x - s1.x)
         y = s1.y + us * (s2.y - s1.y)
         return (x, y), us, uc
     else:
-        # not in between endpoints
         return None
 
 def testLocation(point, polygon):
@@ -784,7 +807,7 @@ if __name__ == "__main__":
     
     import time
     t = time.time()
-    resultpolys = clip_polygon(subjpoly,clippoly,"union")
+    resultpolys = clip_polygon(subjpoly,clippoly,"intersection")
     print "finished:",resultpolys,time.time()-t
     import pydraw
     crs = pydraw.CoordinateSystem([-1,-1,11,11])
