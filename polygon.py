@@ -519,14 +519,11 @@ class Polygon(object):
         #  (prereq, during intersection phase mark .degen flag as True if any of the alphas are 0 or 1)
         #  then mark entry/exit as usual, but if .degen flag then check prev and next location first
 
-<<<<<<< HEAD
         # based on Forster, start by looping both subj and clip and marking each vertex location
-=======
         firstloc = testLocation(self.first, clip)
         s_firstentry = s_entry
         s_entry ^= firstloc in ("in","on")
         print "starts as ",s_entry
->>>>>>> parent of b5ab304... Cleaned up my previous code-clutter
         for s in self.iter():
             s.loc = testLocation(s, clip)
         for c in clip.iter():
@@ -1156,18 +1153,10 @@ if __name__ == "__main__":
     #run operation
     import time
     t = time.time()
-<<<<<<< HEAD
-<<<<<<< HEAD
+
     resultpolys = clip_polygon(subjpoly,clippoly,"intersection")
     print "finished:",resultpolys,time.time()-t
-=======
-    resultpolys = clip_polygon(subjpoly,clippoly,"difference")
-    print "finished:",resultpolys,t-time.time()
->>>>>>> parent of b5ab304... Cleaned up my previous code-clutter
-=======
-    resultpolys = clip_polygon(subjpoly,clippoly,"difference")
-    print "finished:",resultpolys,t-time.time()
->>>>>>> parent of b5ab304... Cleaned up my previous code-clutter
+
     import pydraw
     crs = pydraw.CoordinateSystem([-1,-1,11,11])
     img = pydraw.Image(400,400, crs=crs)

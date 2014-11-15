@@ -441,7 +441,7 @@ if __name__ == "__main__":
     import time
     t = time.time()
     resultpoly = clip(subjpoly,clippoly)
-    print "finished:",resultpolys,time.time()-t
+    print "finished:",resultpoly,time.time()-t
     import pydraw
     crs = pydraw.CoordinateSystem([-1,-1,11,11])
     img = pydraw.Image(400,400, crs=crs)
