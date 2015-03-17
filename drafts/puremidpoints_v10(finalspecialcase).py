@@ -52,7 +52,7 @@ def next_unprocessed(vert):
     origvert = vert
     while vert:
         print "vert, finding next unproc", vert
-        if vert.intersect and not vert.checked and not vert.neighbour.checked:
+        if vert.intersect and not vert.checked and not vert.neighbour.checked and not vert.entrydupl:
             return vert
         
         vert = vert.next
@@ -83,6 +83,7 @@ class Vertex(object):
         self.intersect = intersect  # True if vertex is an intersection
         self.degen = degen
         self.checked = checked      # True if the vertex has been checked (last phase)
+        self.entrydupl = False
 
     @property
     def xy(self):
@@ -108,6 +109,7 @@ class Vertex(object):
         copy.intersect = self.intersect  # True if vertex is an intersection
         copy.degen = self.degen
         copy.checked = self.checked
+        copy.entrydupl = self.entrydupl
         return copy
     
     def __repr__(self):
@@ -381,7 +383,7 @@ class Polygon(object):
 
         # phase one and a half - no intersections between subject and clip, so correctly return results
         # --------------------
-        if not anyintersection: 
+        def specialcase_insidetest():
             resultpolys = []
             if unionmode: # union
                 if clip.first.isInside(self):
@@ -451,6 +453,9 @@ class Polygon(object):
                     resultpolys.append(polytuple)
             # no need to continue so just return result
             return resultpolys
+        
+        if not anyintersection: 
+            return specialcase_insidetest()
 
 
 
@@ -468,7 +473,10 @@ class Polygon(object):
         #firstloc = testLocation(self.first, clip)
         #s_entry ^= firstloc in ("in","on")
 
+        anyintersection = False
+
         print "starts as ",s_entry
+        preventry = "empty..."
         for s in self.iter():
             if s.intersect:
                 print "intersection"
@@ -509,9 +517,14 @@ class Polygon(object):
                         s.entry = not s_entry
                     elif nextloc == "in":
                         s.entry = s_entry
+
+                if s.entry == preventry:
+                    s.entrydupl = True
+                preventry = s.entry
                     
                 #if intersect wasnt deleted, print entry flag
                 if s.intersect:
+                    anyintersection = True
                     print "\t entering = ", s.entry
             else:
                 print "vertex"
@@ -524,6 +537,7 @@ class Polygon(object):
         #firstloc = testLocation(clip.first, self)
         #c_entry ^= firstloc in ("in","on")
         print "starts as ",c_entry
+        preventry = "empty..."
         for c in clip.iter():
             if c.intersect:
                 print "intersection"
@@ -563,6 +577,10 @@ class Polygon(object):
                         c.entry = not c_entry
                     elif nextloc == "in":
                         c.entry = c_entry
+
+                if c.entry == preventry:
+                    c.entrydupl = True
+                preventry = c.entry
                     
                 #if intersect wasnt deleted, set and toggle entry flag
                 if c.intersect:
@@ -582,7 +600,7 @@ class Polygon(object):
         # so correctly return results by testing full inside outside test
         # --------------------
         if not anyintersection:
-            pass
+            return specialcase_insidetest()
 
 
 
@@ -609,7 +627,7 @@ class Polygon(object):
                         if current.intersect:
                             if current.entry == preventry:
                                 current.setChecked()
-                            elif (current.intersect and current.entry != preventry):
+                            elif current.entry != preventry:
                                 print "reached intersection"
                                 break
 
@@ -622,7 +640,7 @@ class Polygon(object):
                         if current.intersect:
                             if current.entry == preventry:
                                 current.setChecked()
-                            elif (current.intersect and current.entry != preventry):
+                            elif current.entry != preventry:
                                 print "reached intersection"
                                 break
 
@@ -632,6 +650,12 @@ class Polygon(object):
                 print "checked",current,current.checked,current.neighbour.checked
                 if current.checked:
                     break
+
+            # FINAL TODO: Remember to check if any of the polygons are only slivers,
+            # ...ie they never returned to their starting point,
+            # ...eg intersection between edge-touching but not overlapping polys
+            # ........
+            # ........
 
             polytuple = (clipped, [])
             resultpolys.append(polytuple)
@@ -842,9 +866,9 @@ if __name__ == "__main__":
         img.save("test_output/"+testname+"-"+mode+".png")
 
     if not os.path.lexists("test_output"): os.mkdir("test_output")
-##    for testname,testclip in testpolys_normal.items():
-##        for mode in ("intersect","union","difference"):
-##            test_draw(testname, subjpoly, testclip, mode)
+    for testname,testclip in testpolys_normal.items():
+        for mode in ("intersect","union","difference"):
+            test_draw(testname, subjpoly, testclip, mode)
     for testname,testclip in testpolys_degens.items():
         for mode in ("intersect","union","difference"):
             test_draw(testname, subjpoly, testclip, mode)
