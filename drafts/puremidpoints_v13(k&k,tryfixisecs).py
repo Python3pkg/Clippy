@@ -303,8 +303,8 @@ class Polygon(object):
                     iS.neighbour = iC
                     iC.neighbour = iS
                     
-                    s_intsecs.append( (iS, s, self.next(s.next)) )
-                    c_intsecs.append( (iC, c, clip.next(c.next)) )
+                    s_intsecs.append( (iS, alphaS, s, self.next(s.next)) )
+                    c_intsecs.append( (iC, alphaC, c, clip.next(c.next)) )
 
 ##                    else:
 ##                        if s_between:
@@ -346,20 +346,30 @@ class Polygon(object):
 ##ring by traversing the sorted array. This insertion subcomputation
 ##will take ...
 
-        for iS,s,s_next in s_intsecs:
-            self.insert(iS, s, s_next)
-        for iC,c,c_next in c_intsecs:
-            clip.insert(iC, c, c_next)
+        for iS,a,s,s_next in reversed(s_intsecs):
+            if a == 0:
+                self.replace(s, iS)
+            elif a == 1:
+                self.replace(s_next, iS)
+            else:
+                self.insert(iS, s, s_next)
+        for iC,a,c,c_next in reversed(c_intsecs):
+            if a == 0:
+                self.replace(c, iC)
+            elif a == 1:
+                self.replace(c_next, iC)
+            else:
+                clip.insert(iC, c, c_next)
 
         # collect into lists and relink to fix any insertion link issues
-        slist = [s for s in self.iter()]
-        self.first = None
-        for s in slist:
-            self.add(s)
-        clist = [c for c in clip.iter()]
-        clip.first = None
-        for c in clist:
-            clip.add(c)
+##        slist = [s for s in self.iter()]
+##        self.first = None
+##        for s in slist:
+##            self.add(s)
+##        clist = [c for c in clip.iter()]
+##        clip.first = None
+##        for c in clist:
+##            clip.add(c)
 
         #print "testing if insert was done correctly"
         for s in self.iter():
@@ -519,24 +529,23 @@ class Polygon(object):
         for c in clip.iter():
             print c, c.entry
 
-        # set subject, based only on first isect
-        for s in self.iter():
-            if s.intersect:
+        # set subject, based only on first isect where both neighbours have valid flag
+        for c in clip.iter():
+            if c.entry:
+                s = c.neighbour
                 mark_flags(clip, s, s_entry)
                 if s.entry:
+                    first_c = c
                     first_s = s
-                    print s.entry
+                    print 777,s.entry
                     break
 
         else:
-            print "no intersections in subj"
-            # all intersections between subject and clip have been deleted,
-            # so correctly return results by testing full inside outside test
             return specialcase_insidetest()
+            #raise Exception("weird special case, no neighbours that both have flag left")
         
-        # if first is different set all as opposite
+        # if neighbour of first is different, then set all as opposite
         print "view first"
-        first_c = next((c for c in clip.iter() if c.entry), None)
         print first_c, first_c.entry
         print first_s, first_s.entry
         if first_c.entry != first_s.entry:
@@ -973,9 +982,9 @@ if __name__ == "__main__":
         for mode in ("intersect","union","difference"):
             print mode
             test_draw(testname, subjpoly, testclip, mode)
-##    for testname,testclip in testpolys_nextto_almostsame.items():
-##        print testname
-##        for mode in ("intersect","union","difference"):
-##            print mode
-##            test_draw(testname, subjpoly, testclip, mode)
+    for testname,testclip in testpolys_nextto_almostsame.items():
+        print testname
+        for mode in ("intersect","union","difference"):
+            print mode
+            test_draw(testname, subjpoly, testclip, mode)
     
