@@ -48,7 +48,7 @@ If not, see <https://github.com/helderco/polyclip>
 
 
 
-
+DEBUG = False
 
 
 class Vertex(object):
@@ -259,11 +259,6 @@ class Polygon(object):
         f = True, b = False when stored in the entry record
         """
 
-        #   CHANGES TO ORIGINAL ALGORITHM:
-        #       during intersection phase mark .on flag as True if alphas are 0 or 1
-        #       then mark entry/exit as usual, but if .on flag then check prev and next and neighbour location first
-
-
         # detect clip mode
         unionmode = not s_entry and not c_entry
         intersectionmode = s_entry and c_entry
@@ -280,6 +275,9 @@ class Polygon(object):
         if last.x == first.x and last.y == first.y:
             first.prev = last.prev
             last.prev.next = first
+
+        # TODO: maybe also remove repeat points anywhere?
+        # ...
         
         # phase one - find intersections
         # ------------------------------
@@ -291,12 +289,7 @@ class Polygon(object):
                 try:
                     #print "find isect %s - %s and %s - %s" %(s.xy, self.next(s.next).xy, c.xy, clip.next(c.next).xy )
                     i, alphaS, alphaC = intersect_or_on(s, self.next(s.next),
-                                                        c, clip.next(c.next) )
-                    #print i, alphaS, alphaC
-##                    s_between = (0 < alphaS < 1)
-##                    c_between = (0 < alphaC < 1)
-##                    if s_between and c_between:
-##                        #both subj and clip intersect each other somewhere in the middle
+                                                        c, clip.next(c.next))
                     
                     iS = Vertex(i, alphaS, intersect=True, entry=False)
                     iC = Vertex(i, alphaC, intersect=True, entry=False)
@@ -306,47 +299,13 @@ class Polygon(object):
                     
                     s_intsecs.append( (iS, alphaS, s, self.next(s.next)) )
                     c_intsecs.append( (iC, alphaC, c, clip.next(c.next)) )
-
-##                    else:
-##                        if s_between:
-##                            #subj line is touched by the start or stop point of a line from the clip polygon, so insert and mark that intersection as a degenerate
-##                            iS = Vertex(i, alphaS, intersect=True, entry=False, degen=True)
-##                            self.insert(iS, s, self.next(s.next))
-##                        elif alphaS == 0:
-##                            #subj line starts at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
-##                            iS = Vertex(i, alphaS, intersect=True, entry=False, degen=True)
-##                            self.insert(iS, s, self.next(s.next))
-##                        elif alphaS == 1:
-##                            #subj line ends at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
-##                            iS = Vertex(i, alphaS, intersect=True, entry=False, degen=True)
-##                            self.insert(iS, s, self.next(s.next))
-##                        if c_between:
-##                            #clip line is touched by the start or stop point of a line from the subj polygon, so insert and mark that intersection as a degenerate
-##                            iC = Vertex(i, alphaC, intersect=True, entry=False, degen=True)
-##                            clip.insert(iC, c, clip.next(c.next))
-##                        elif alphaC == 0:
-##                            #clip line starts at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
-##                            iC = Vertex(i, alphaC, intersect=True, entry=False, degen=True)
-##                            clip.insert(iC, c, clip.next(c.next))
-##                        elif alphaC == 1:
-##                            #clip line ends at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
-##                            iC = Vertex(i, alphaC, intersect=True, entry=False, degen=True)
-##                            clip.insert(iC, c, clip.next(c.next))
-                    
+     
                     anyintersection = True
                     
                 except TypeError:
                     pass # this simply means intersect() returned None
 
-##ALTERNATIVE APPROACH
-##http://www.cc.gatech.edu/~jarek/graphics/papers/04PolygonBooleansMargalit.pdf
-##Now, to handle the insertions, we can put the intersection
-##points in a temporary array, sort the array according
-##to the coordinates of the endpoints and the
-##direction of the original edge, and then form the vertex
-##ring by traversing the sorted array. This insertion subcomputation
-##will take ...
-
+        # insert intersections into originals
         for iS,a,s,s_next in reversed(s_intsecs):
             if a == 0:
                 self.replace(s, iS)
@@ -361,16 +320,6 @@ class Polygon(object):
                 self.replace(c_next, iC)
             else:
                 clip.insert(iC, c, c_next)
-
-        # collect into lists and relink to fix any insertion link issues
-##        slist = [s for s in self.iter()]
-##        self.first = None
-##        for s in slist:
-##            self.add(s)
-##        clist = [c for c in clip.iter()]
-##        clip.first = None
-##        for c in clist:
-##            clip.add(c)
 
         #print "testing if insert was done correctly"
         for s in self.iter():
@@ -467,10 +416,8 @@ class Polygon(object):
         # phase two - identify entry/exit points
         # --------------------------------------
 
-        # From K&K: compare first intersection of S with neighbour (C)
-        # is different, then C can always be set as opposite.
-        # if same, then always set as same. not sure??
-
+        # From K&K
+        
         def mark_flags(poly, c, c_entry):
             "c and c_entry are not actually the clip, can be for both s and c, just too lazy to change."
             #print "intersection"
@@ -484,6 +431,8 @@ class Polygon(object):
                 prevloc = testLocation(prevmid, poly)
                 nextmid = Vertex(((c.x+c.next.x)/2.0,(c.y+c.next.y)/2.0))
                 nextloc = testLocation(nextmid, poly)
+            if prevloc == "in" or nextloc == "in":
+                poly.anyinside = True
             #print "\t %s -> degenintsec -> %s" %(prevloc,nextloc)
             if prevloc == "out":
                 if nextloc == "out":
@@ -511,6 +460,8 @@ class Polygon(object):
                 elif nextloc == "in":
                     c.entry = "en" if c_entry else "ex"
 
+        self.anyinside = False
+
         # set clip
         prevsingle = None
         for c in clip.iter():
@@ -522,15 +473,35 @@ class Polygon(object):
                         c.couple = prevsingle
                         prevsingle.couple = c
                     prevsingle = c
+                # set crosschange
+                if c.entry == "en/ex" == c.neighbour.entry or c.entry == "ex/en" == c.neighbour.entry:
+                    print "Maybe crosschange..."
+                    tri1 = [c.neighbour.prev, c.prev, c.neighbour.next]
+                    tri1.append(tri1[0])
+                    tri2 = [c.neighbour.prev, c.prev, c.next]
+                    tri2.append(tri2[0])
+                    xs1,ys1 = map(list,zip(*((v.x,v.y) for v in tri1)))
+                    xs2,ys2 = map(list,zip(*((v.x,v.y) for v in tri2)))
+                    dir1 = sum(xs1[i]*(ys1[i+1]-ys1[i-1]) for i in range(1, len(tri1)))/2.0
+                    dir2 = sum(xs2[i]*(ys2[i+1]-ys2[i-1]) for i in range(1, len(tri2)))/2.0
+                    if dir1 < 0 != dir2 < 0: # different orientation
+                        print "CROSSCHANGE!!!"
+                        c.cross_change = True
+                        c.neighbour.cross_change = True # not sure if should set neighbour too
 
-        # set crosschange
+        # maybe early abort
+        if not self.anyinside and intersectionmode:
+            return []
+
+        # what about perfect overlap???
         # ...
 
-        print "view clip entries"
-        for c in clip.iter():
-            print c, c.entry
+        if False: #DEBUG:
+            print "view clip entries"
+            for c in clip.iter():
+                print c, c.entry
 
-        # set subject, based only on first isect where both neighbours have valid flag
+        # find first isect where both neighbours have valid flag
         for c in clip.iter():
             if c.entry:
                 s = c.neighbour
@@ -538,18 +509,19 @@ class Polygon(object):
                 if s.entry:
                     first_c = c
                     first_s = s
-                    print 777,s.entry
+                    # print 777,s.entry
                     break
 
         else:
             return specialcase_insidetest()
             #raise Exception("weird special case, no neighbours that both have flag left")
         
-        # if neighbour of first is different, then set all as opposite
+        # autoset subj, if neighbour of first is different, then set all as opposite
+        # TODO: how deal with s_entry in case of different modes...?
         print "view first"
         print first_c, first_c.entry
         print first_s, first_s.entry
-        if first_c.entry != first_s.entry:
+        if first_c.entry != first_s.entry: # and s_entry: # this is the behaviour for standard intersect mode, otherwise flip, hence the s_entry
             for c in clip.iter():
                 if c.entry:
                     if c.entry == "en": c.neighbour.entry = "ex"
@@ -563,7 +535,7 @@ class Polygon(object):
                 if c.entry:
                     c.neighbour.entry = c.entry
 
-        # set couple
+        # set couple for subj (not sure if needed)
         prevsingle = None
         for s in self.iter():
             if s.entry:
@@ -573,12 +545,10 @@ class Polygon(object):
                         prevsingle.couple = s
                     prevsingle = s
 
-        # set crosschange
-        # ...
-                    
-        print "view subj entries"
-        for s in self.iter():
-            print s, s.entry
+        if False: #DEBUG:       
+            print "view subj entries"
+            for s in self.iter():
+                print s, s.entry
 
 
 
@@ -592,8 +562,8 @@ class Polygon(object):
         def next_unprocessed(vert):
             origvert = vert
             while vert:
-                #print "vert, finding next unproc", vert
-                if vert.intersect:
+                if vert.entry and not (vert.checked or vert.neighbour.checked):
+                    #print "vert, found next unproc", vert, vert.checked, vert.neighbour.checked
                     if vert.couple:
                         # rule 1
                         if vert.couple.entry and vert.entry:
@@ -602,8 +572,6 @@ class Polygon(object):
                                 return vert.couple
                             elif vert.couple.entry == "ex" and vert.entry == "ex":
                                 return vert
-                        else:
-                            vert = vert.next
                     # rule 3
                     else:
                         return vert
@@ -688,35 +656,34 @@ class Polygon(object):
                         return "D4"
 
         def proceed(cur, stat):
+            cur.checked = True
             if stat == "D1":
                 clipped.add(Vertex(cur))
                 return cur.next
-            if stat == "D2":
+            elif stat == "D2":
                 clipped.add(Vertex(cur))
                 return cur.prev
-            return cur.neighbour
+            else:
+                return cur.neighbour
 
         ####
         resultpolys = []
-        # ... how about multiple polys?
 
-        cur = self.first
-        cur.checked = True
+        self.first.checked = True
+        cur = prev = start = next_unprocessed(self.first)
 
-        while True:
+        while cur:
             # each new polygon
             print "new poly"
-            cur = prev = start = next_unprocessed(cur)
-            if not cur:
-                raise Exception("Quit early, should test special cases")
+
             stat = DeleteFlag1(cur, "D3")
-            print "v", cur, cur.entry, stat
+            if DEBUG: print "v", cur, cur.entry, stat
             clipped = Polygon()
             cur = proceed(cur, stat)
 
             # collect vertexes
             while cur != start:
-                print "v", cur, cur.entry, stat
+                if DEBUG: print "v", cur, cur.entry, stat
                 if cur.entry:
                     if stat == "D1" or stat == "D2":
                         stat = DeleteFlag2(cur, prev, stat)
@@ -725,18 +692,13 @@ class Polygon(object):
                     prev = cur
                 cur = proceed(cur, stat)
 
+            # return to first vertex
+            clipped.add(Vertex(clipped.first))
+
             print clipped
 
-            # no more polygons to collect
-            #if cur.checked or cur.neighbour.checked: # == self.first
-            #    break
-            # currently doesnt detect a return to start so just break after first poly
             resultpolys.append((clipped,[]))
-            break
-
-
-
-        # how to do holes...?
+            cur = prev = start = next_unprocessed(self.first)
 
 
 
@@ -903,8 +865,8 @@ if __name__ == "__main__":
     # degenerate intersections
     testpolys_degens = {"degenerate, starts on edge intersection and goes inside":
                         [(0,5),(6,4),(10,4),(10,10),(4,10),(0,5)],
-                        "degenerate, starts on edge intersection and goes outside":
-                        [(5,6),(5.2,5.5),(5,5.4),(4.8,5.5)],
+##                        "degenerate, starts on edge intersection and goes outside":
+##                        [(5,6),(5.2,5.5),(5,5.4),(4.8,5.5)],
                         "degenerate, hesitating to enter and exit":
                         [(1,5),(6,4),(6,5),(10,4),(10,10),(4,10),(2,6),(1,6),(1,5)],
                         "degenerate, also multiple degens along shared line":
@@ -930,6 +892,8 @@ if __name__ == "__main__":
     import time
     import pydraw
 
+    DEBUG = False
+
     # test geo
     
 ##    def test_draw(testname, subjpoly, clippoly, mode):
@@ -952,7 +916,7 @@ if __name__ == "__main__":
 ##    world = pygeoj.load("cshapes.geo.json")
 ##    norw = next(cntr.geometry.coordinates[0][0] for cntr in world if cntr.properties["CNTRY_NAME"] == "Norway")
 ##    swed = next(cntr.geometry.coordinates[0][0] for cntr in world if cntr.properties["CNTRY_NAME"] == "Sweden")
-##    test_draw("norway-sweden", norw, swed, "intersect")
+##    test_draw("norway-sweden", norw, swed, "difference")
 ##    
 ##    breakonpurpose
 
