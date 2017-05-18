@@ -14,7 +14,7 @@ import math,itertools
 def _pairwise(iterable):
     a,b = itertools.tee(iterable)
     next(b, None)
-    return itertools.izip(a,b)
+    return zip(a,b)
 
 #CLASSES
 class _Line:
@@ -114,7 +114,7 @@ class _NewPolygon:
         current = self.first
         while current != self.last:
             yield current
-            current = current.next
+            current = current.__next__
         yield current
     def InsertNode(self, node, prev, next):
         """
@@ -123,7 +123,7 @@ class _NewPolygon:
         """
         _searchnode = prev
         while _searchnode != next and _searchnode.alpha < node.alpha:
-            _searchnode = _searchnode.next
+            _searchnode = _searchnode.__next__
         node.next = _searchnode
         node.prev = _searchnode.prev
         node.prev.next = node
@@ -254,13 +254,13 @@ def _phase1(subjpoly, clippoly):
     itersubjpoly = [node for node in subjpoly]
     iterclippoly = [node for node in clippoly]
     for subjnode in itersubjpoly:
-        subjline = _Line(subjnode, subjnode.next)
+        subjline = _Line(subjnode, subjnode.__next__)
         clipnode = clippoly.first
         for clipnode in iterclippoly:
-            clipline = _Line(clipnode, clipnode.next)
+            clipline = _Line(clipnode, clipnode.__next__)
             intersection = subjline.intersect(clipline)
             #insert intersection vertex
-            print "intsec",intersection,subjline,clipline
+            print("intsec",intersection,subjline,clipline)
             if intersection:
                 intersection.isintersection = True
                 #first in subjpoly
@@ -268,13 +268,13 @@ def _phase1(subjpoly, clippoly):
                 alpha = intsecline.relativelength()/float(subjline.relativelength())
                 insertsubj = intersection
                 insertsubj.alpha = alpha
-                subjpoly.InsertNode(insertsubj, prev=subjnode, next=subjnode.next)
+                subjpoly.InsertNode(insertsubj, prev=subjnode, next=subjnode.__next__)
                 #then in clippoly
                 intsecline = _Line(clipnode,intersection)
                 alpha = intsecline.relativelength()/float(clipline.relativelength())
                 insertclip = intersection
                 insertclip.alpha = alpha
-                clippoly.InsertNode(insertclip, prev=clipnode, next=clipnode.next)
+                clippoly.InsertNode(insertclip, prev=clipnode, next=clipnode.__next__)
                 #neighbour references
                 subjnode.neighbour = clipnode
                 clipnode.neighbour = subjnode
@@ -286,24 +286,24 @@ def _phase2(subjpoly, clippoly):
     Changes them in place, and doesnt return anything.
     """
     #first subj
-    print "subj"
+    print("subj")
     if _pointinpolygon(subjpoly.first, clippoly):
         entry = False
     else:
         entry = True
     for node in subjpoly:
-        print node.x,node.y,entry
+        print(node.x,node.y,entry)
         if node.isintersection:
             node.entry = entry
             entry = not entry
     #then clip
-    print "clip"
+    print("clip")
     if _pointinpolygon(clippoly.first, subjpoly):
         entry = False
     else:
         entry = True
     for node in clippoly:
-        print node.x,node.y,entry
+        print(node.x,node.y,entry)
         if node.isintersection:
             node.entry = entry
             entry = not entry
@@ -320,28 +320,28 @@ def _phase3(subjpoly, clippoly):
     #create newpolygon
     newpoly = []
     #loop
-    print "starting at intersection point",current
+    print("starting at intersection point",current)
     while not current.visited: #until looped entire subject polygon
         ###
         current.visited = True
         if current.entry:
             isintersection = False
             while not isintersection:
-                current = current.next
+                current = current.__next__
                 isintersection = current.isintersection
                 newpoly.append(current)
-                print "seeking intersection forward",current, current.isintersection
+                print("seeking intersection forward",current, current.isintersection)
         else:
             isintersection = False
             while not isintersection:
                 current = current.prev
                 isintersection = current.isintersection
                 newpoly.append(current)
-                print "seeking intersection back",current, current.isintersection
+                print("seeking intersection back",current, current.isintersection)
             current.visited = True
         current = current.neighbour
-        print "intersection found, jumping to neighbour polygon:",current
-    print "circled entire polygon?",current,current.visited,current.isintersection
+        print("intersection found, jumping to neighbour polygon:",current)
+    print("circled entire polygon?",current,current.visited,current.isintersection)
     return [(node.x,node.y) for node in newpoly]
 def clip(subjpoly, clippoly, cliptype):
     if cliptype == "intersect":
@@ -357,7 +357,7 @@ if __name__ == "__main__":
     subjpoly = [(0,0),(6,0),(6,6),(0,6),(0,0)]
     clippoly = [(1,4),(3,8),(5,4),(5,10),(1,10),(1,4)]
     result = clip(subjpoly,clippoly,"intersect")
-    print "finished:",result
+    print("finished:",result)
     import pydraw
     crs = pydraw.CoordinateSystem([-1,-1,11,11])
     img = pydraw.Image(400,400, crs=crs)

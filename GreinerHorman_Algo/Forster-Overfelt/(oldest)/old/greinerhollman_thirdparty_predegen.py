@@ -82,7 +82,7 @@ class Vertex(object):
         winding_number = 0
         infinity = Vertex((1000000000, self.y))
         for q in poly.iter():
-            location = intersect_or_on(self, infinity, q, poly.next(q.next))
+            location = intersect_or_on(self, infinity, q, poly.next(q.__next__))
             if location == "on":
                 return location
             if not q.intersect and location:
@@ -105,7 +105,7 @@ class Vertex(object):
         polypoint = poly.first
         lastpolypointx,lastpolypointy = polypoint.x,polypoint.y
         while True:
-            polypoint = polypoint.next
+            polypoint = polypoint.__next__
             polypointx,polypointy = polypoint.x,polypoint.y
             if ((((polypointy <= pointy) and (pointy < lastpolypointy)) or \
                 ((lastpolypointy <= pointy) and (pointy < polypointy))) and \
@@ -113,7 +113,7 @@ class Vertex(object):
                 (lastpolypointy - polypointy) + polypointx)):
                 inside = not inside
             lastpolypointx,lastpolypointy = polypoint.x,polypoint.y
-            if polypoint.next == poly.first: break
+            if polypoint.__next__ == poly.first: break
         return inside
 
     def setChecked(self):
@@ -164,7 +164,7 @@ class Polygon(object):
         """
         curr = start
         while curr != end and curr.alpha < vertex.alpha:
-            curr = curr.next
+            curr = curr.__next__
 
         vertex.next = curr
         prev = curr.prev
@@ -176,7 +176,7 @@ class Polygon(object):
         """Return the next non intersecting vertex after the one specified."""
         c = v
         while c.intersect:
-            c = c.next
+            c = c.__next__
         return c
 
     @property
@@ -251,15 +251,15 @@ class Polygon(object):
                 for c in clip.iter(): # for each vertex Cj of clip polygon do
                     if not c.intersect:
                         try:
-                            i, alphaS, alphaC = intersect(s, self.next(s.next),
-                                                          c, clip.next(c.next))
+                            i, alphaS, alphaC = intersect(s, self.next(s.__next__),
+                                                          c, clip.next(c.__next__))
                             iS = Vertex(i, alphaS, intersect=True, entry=False)
                             iC = Vertex(i, alphaC, intersect=True, entry=False)
                             iS.neighbour = iC
                             iC.neighbour = iS
 
-                            self.insert(iS, s, self.next(s.next))
-                            clip.insert(iC, c, clip.next(c.next))
+                            self.insert(iS, s, self.next(s.__next__))
+                            clip.insert(iC, c, clip.next(c.__next__))
 
                             anyintersection = True
                         except TypeError:
@@ -408,7 +408,7 @@ class Polygon(object):
                 current.setChecked()
                 if current.entry:
                     while True:
-                        current = current.next
+                        current = current.__next__
                         clipped.add(Vertex(current))
                         if current.intersect:
                             break
@@ -449,7 +449,7 @@ class Polygon(object):
         s = self.first
         while True:
             yield s
-            s = s.next
+            s = s.__next__
             if s == self.first:
                 return
 
@@ -478,7 +478,7 @@ def intersect(s1, s2, c1, c2):
 
     if (us == 0 or us == 1) and (0 <= uc <= 1) or\
        (uc == 0 or uc == 1) and (0 <= us <= 1):
-        print "whoops! degenerate case!"
+        print("whoops! degenerate case!")
         return None
 
     elif (0 < us < 1) and (0 < uc < 1):
@@ -581,7 +581,7 @@ if __name__ == "__main__":
     #clippoly = [(-10,-10),(-10,-70),(-70,-70),(-70,-10),(-10,-10)] #larger, outside
     #clippoly = [(random.randrange(0,10),random.randrange(0,10)) for _ in range(10)] #random
     resultpolys = clip_polygon(subjpoly,clippoly,"union")
-    print "finished:",resultpolys
+    print("finished:",resultpolys)
     import pydraw
     crs = pydraw.CoordinateSystem([-1,-1,11,11])
     img = pydraw.Image(400,400, crs=crs)

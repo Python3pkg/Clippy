@@ -105,7 +105,7 @@ class Polygon(object):
             prev.next = vertex
 
     def replace(self, old, new):
-        new.next = old.next
+        new.next = old.__next__
         new.prev = old.prev
         old.prev.next = new
         old.next.prev = new
@@ -124,7 +124,7 @@ class Polygon(object):
         """
         curr = start
         while curr != end and curr.alpha < vertex.alpha:
-            curr = curr.next
+            curr = curr.__next__
 
         vertex.next = curr
         prev = curr.prev
@@ -136,7 +136,7 @@ class Polygon(object):
         """Return the next non intersecting vertex after the one specified."""
         c = v
         while c.intersect:
-            c = c.next
+            c = c.__next__
         return c
 
     @property
@@ -234,7 +234,7 @@ class Polygon(object):
                     if not c.intersect:
                         try:
                             
-                            i, alphaS, alphaC = intersect_or_on(s, s.next, c, c.next)
+                            i, alphaS, alphaC = intersect_or_on(s, s.__next__, c, c.__next__)
 
                             s_between = (0 < alphaS < 1)
                             c_between = (0 < alphaC < 1)
@@ -242,13 +242,13 @@ class Polygon(object):
                                 #both subj and clip intersect each other somewhere in the middle
                                 iS = Vertex(i, alphaS, intersect=True, entry=False)
                                 iC = Vertex(i, alphaC, intersect=True, entry=False)
-                                self.insert(iS, s, self.next(s.next))
-                                clip.insert(iC, c, clip.next(c.next))
+                                self.insert(iS, s, self.next(s.__next__))
+                                clip.insert(iC, c, clip.next(c.__next__))
                             else:
                                 if s_between:
                                     #subj line is touched by the start or stop point of a line from the clip polygon, so insert and mark that intersection as a degenerate
                                     iS = Vertex(i, alphaS, intersect=True, entry=False, degen=True)
-                                    self.insert(iS, s, self.next(s.next))
+                                    self.insert(iS, s, self.next(s.__next__))
                                 elif alphaS == 0:
                                     #subj line starts at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
                                     iS = Vertex(i, alphaS, intersect=True, entry=False, degen=True)
@@ -256,11 +256,11 @@ class Polygon(object):
                                 elif alphaS == 1:
                                     #subj line ends at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
                                     iS = Vertex(i, alphaS, intersect=True, entry=False, degen=True)
-                                    self.replace(self.next(s.next), iS)
+                                    self.replace(self.next(s.__next__), iS)
                                 if c_between:
                                     #clip line is touched by the start or stop point of a line from the subj polygon, so insert and mark that intersection as a degenerate
                                     iC = Vertex(i, alphaC, intersect=True, entry=False, degen=True)
-                                    clip.insert(iC, c, clip.next(c.next))
+                                    clip.insert(iC, c, clip.next(c.__next__))
                                 elif alphaC == 0:
                                     #clip line starts at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
                                     iC = Vertex(i, alphaC, intersect=True, entry=False, degen=True)
@@ -268,7 +268,7 @@ class Polygon(object):
                                 elif alphaC == 1:
                                     #clip line ends at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
                                     iC = Vertex(i, alphaC, intersect=True, entry=False, degen=True)
-                                    clip.replace(clip.next(c.next), iC)
+                                    clip.replace(clip.next(c.__next__), iC)
                                 
                             iS.neighbour = iC
                             iC.neighbour = iS
@@ -368,21 +368,21 @@ class Polygon(object):
 
         #firstloc = testLocation(self.first, clip)
         #s_entry ^= firstloc in ("in","on")
-        print "starts as ",s_entry
+        print("starts as ",s_entry)
         for s in self.iter():
             if s.intersect:
-                print "intersection"
-                print "\t",s
+                print("intersection")
+                print("\t",s)
                 # intersection is degenerate, is the start/endpoint of a line
                 # so maybe delete intersection flag based on prev/next locations
                 prevloc = testLocation(s.prev, clip)
-                nextloc = testLocation(s.next, clip)
+                nextloc = testLocation(s.__next__, clip)
                 if prevloc == "on" or nextloc == "on":
                     prevmid = Vertex(((s.x+s.prev.x)/2.0,(s.y+s.prev.y)/2.0))
                     prevloc = testLocation(prevmid, clip)
                     nextmid = Vertex(((s.x+s.next.x)/2.0,(s.y+s.next.y)/2.0))
                     nextloc = testLocation(nextmid, clip)
-                print "\t %s -> degenintsec -> %s" %(prevloc,nextloc)
+                print("\t %s -> degenintsec -> %s" %(prevloc,nextloc))
                 if prevloc == "out":
                     if nextloc == "out":
                         #just touching
@@ -441,29 +441,29 @@ class Polygon(object):
 ##                                s.intersect = False
                 #if intersect wasnt deleted, set and toggle entry flag
                 if s.intersect:
-                    print "\t entering = ", s.entry
+                    print("\t entering = ", s.entry)
             else:
-                print "vertex"
-                print "\t",s
+                print("vertex")
+                print("\t",s)
         # then do same for clip polygon
-        print "---"
+        print("---")
         #firstloc = testLocation(clip.first, self)
         #c_entry ^= firstloc in ("in","on")
-        print "starts as ",c_entry
+        print("starts as ",c_entry)
         for c in clip.iter():
             if c.intersect:
-                print "intersection"
-                print "\t",c
+                print("intersection")
+                print("\t",c)
                 # intersection is degenerate, is the start/endpoint of a line
                 # so maybe delete intersection flag based on prev/next locations
                 prevloc = testLocation(c.prev, self)
-                nextloc = testLocation(c.next, self)
+                nextloc = testLocation(c.__next__, self)
                 if prevloc == "on" or nextloc == "on":
                     prevmid = Vertex(((c.x+c.prev.x)/2.0,(c.y+c.prev.y)/2.0))
                     prevloc = testLocation(prevmid, self)
                     nextmid = Vertex(((c.x+c.next.x)/2.0,(c.y+c.next.y)/2.0))
                     nextloc = testLocation(nextmid, self)
-                print "\t %s -> degenintsec -> %s" %(prevloc,nextloc)
+                print("\t %s -> degenintsec -> %s" %(prevloc,nextloc))
                 if prevloc == "out":
                     if nextloc == "out":
                         #just touching
@@ -522,40 +522,40 @@ class Polygon(object):
 ##                                s.intersect = False
                 #if intersect wasnt deleted, set and toggle entry flag
                 if c.intersect:
-                    print "\t entering = ", c.entry
+                    print("\t entering = ", c.entry)
                     # check if neighbours have same entry flag
                     #if c.entry == c.neighbour.entry:
                     #    c.neighbour.intersect = False
             else:
-                print "vertex"
-                print "\t",c
+                print("vertex")
+                print("\t",c)
 
         # phase three - construct a list of clipped polygons
         # --------------------------------------------------
         resultpolys = []
         for _ in self.unprocessed():
-            print "traverse new outpolygon"
+            print("traverse new outpolygon")
             current = self.first_intersect
             clipped = Polygon()
             clipped.add(Vertex(current))
             while True:
                 current.setChecked()
-                print "flag is %s for %s" %(current.entry, current)
+                print("flag is %s for %s" %(current.entry, current))
                 if current.entry:
                     while True:
-                        current = current.next
-                        print "next",current
+                        current = current.__next__
+                        print("next",current)
                         clipped.add(Vertex(current))
                         if current.intersect:
-                            print "reached intersection"
+                            print("reached intersection")
                             break
                 else:
                     while True:
                         current = current.prev
-                        print "prev",current
+                        print("prev",current)
                         clipped.add(Vertex(current))
                         if current.intersect:
-                            print "reached intersection"
+                            print("reached intersection")
                             break
 
                 current = current.neighbour
@@ -588,7 +588,7 @@ class Polygon(object):
         s = self.first
         while True:
             yield s
-            s = s.next
+            s = s.__next__
             if s == self.first:
                 return
 
@@ -814,7 +814,7 @@ if __name__ == "__main__":
     import time
     t = time.time()
     resultpolys = clip_polygon(subjpoly,clippoly,"intersection")
-    print "finished:",resultpolys,time.time()-t
+    print("finished:",resultpolys,time.time()-t)
     import pydraw
     crs = pydraw.CoordinateSystem([-1,-1,11,11])
     img = pydraw.Image(400,400, crs=crs)

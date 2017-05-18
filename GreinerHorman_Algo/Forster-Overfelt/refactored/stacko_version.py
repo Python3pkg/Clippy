@@ -48,7 +48,7 @@ class Polygon(object):
         s = self.first
         while True:
             yield s
-            s = s.next
+            s = s.__next__
             if s == self.first:
                 return
 
@@ -67,7 +67,7 @@ class Polygon(object):
             prev.next = vertex
 
     def replace(self, old, new):
-        new.next = old.next
+        new.next = old.__next__
         new.prev = old.prev
         old.prev.next = new
         old.next.prev = new
@@ -86,7 +86,7 @@ class Polygon(object):
         """
         curr = start
         while curr != end and curr.alpha < vertex.alpha:
-            curr = curr.next
+            curr = curr.__next__
 
         vertex.next = curr
         prev = curr.prev
@@ -249,7 +249,7 @@ def insert_intersections(subj, clip):
         if not s.intersect:
             for c in clip: # for each vertex Cj of clip polygon do
                 if not c.intersect:
-                    intersection = lines_intersect(s, s.next, c, c.next)
+                    intersection = lines_intersect(s, s.__next__, c, c.__next__)
                     if intersection:
                         i, alphaS, alphaC = intersection
                         s_between = (0 < alphaS < 1)
@@ -258,13 +258,13 @@ def insert_intersections(subj, clip):
                             #both subj and clip intersect each other somewhere in the middle
                             iS = Vertex(i, alphaS, intersect=True, entry=False)
                             iC = Vertex(i, alphaC, intersect=True, entry=False)
-                            subj.insert(iS, s, s.next)
-                            clip.insert(iC, c, c.next)
+                            subj.insert(iS, s, s.__next__)
+                            clip.insert(iC, c, c.__next__)
                         else:
                             if s_between:
                                 #subj line is touched by the start or stop point of a line from the clip polygon, so insert and mark that intersection as a degenerate
                                 iS = Vertex(i, alphaS, intersect=True, entry=False, degen=True)
-                                subj.insert(iS, s, s.next)
+                                subj.insert(iS, s, s.__next__)
                             elif alphaS == 0:
                                 #subj line starts at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
                                 iS = Vertex(i, alphaS, intersect=True, entry=False, degen=True)
@@ -272,11 +272,11 @@ def insert_intersections(subj, clip):
                             elif alphaS == 1:
                                 #subj line ends at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
                                 iS = Vertex(i, alphaS, intersect=True, entry=False, degen=True)
-                                subj.replace(s.next, iS)
+                                subj.replace(s.__next__, iS)
                             if c_between:
                                 #clip line is touched by the start or stop point of a line from the subj polygon, so insert and mark that intersection as a degenerate
                                 iC = Vertex(i, alphaC, intersect=True, entry=False, degen=True)
-                                clip.insert(iC, c, c.next)
+                                clip.insert(iC, c, c.__next__)
                             elif alphaC == 0:
                                 #clip line starts at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
                                 iC = Vertex(i, alphaC, intersect=True, entry=False, degen=True)
@@ -284,7 +284,7 @@ def insert_intersections(subj, clip):
                             elif alphaC == 1:
                                 #clip line ends at intersection, so mark the "degen"-flag, and replace vertex instead of inserting
                                 iC = Vertex(i, alphaC, intersect=True, entry=False, degen=True)
-                                clip.replace(c.next, iC)
+                                clip.replace(c.__next__, iC)
                             
                         iS.neighbour = iC
                         iC.neighbour = iS
@@ -298,7 +298,7 @@ def process_intersections(poly1, poly2):
         if current.intersect:
             pre = current.intersect
             label_cases(current)
-            if current.interesct != pre: print current
+            if current.interesct != pre: print(current)
             #Make sure current is still an intersection
             if current.intersect:
                 label_cases(current.neighbour)
@@ -307,7 +307,7 @@ def process_intersections(poly1, poly2):
                     current.intersect = False
         if current == poly1.first:
             flag = False
-        current = current.next #move to the next point
+        current = current.__next__ #move to the next point
 
 def clip(subject, constraint):
 
@@ -319,8 +319,8 @@ def clip(subject, constraint):
     #prepping process
     mark_locations(subject, constraint) #label vertices as inside or outside
     insert_intersections(subject, constraint) #find intersections
-    for s in subject: print s
-    for c in constraint: print c
+    for s in subject: print(s)
+    for c in constraint: print(c)
     process_intersections(subject, constraint) #label intersections and entry or exit and possibly remove
 
     flag = True #loop flag
@@ -329,7 +329,7 @@ def clip(subject, constraint):
     current = subject.first
     #loop through our polygon until we have found the first intersection
     while flag:
-        current = current.next
+        current = current.__next__
         #Either an intersection has been found or no intersections found
         if current.intersect or current == subject.first:
             flag = False
@@ -341,12 +341,12 @@ def clip(subject, constraint):
         clipped.append((current.x,current.y))
         while flag:
             #Entry
-            print "Hmm",current
+            print("Hmm",current)
             if current.entry:
-                current = current.next
+                current = current.__next__
                 while not current.intersect:
                     clipped.append((current.x,current.y))
-                    current = current.next
+                    current = current.__next__
             #Exit
             else:
                 current = current.prev
@@ -441,7 +441,7 @@ if __name__ == "__main__":
     import time
     t = time.time()
     resultpoly = clip(subjpoly,clippoly)
-    print "finished:",resultpoly,time.time()-t
+    print("finished:",resultpoly,time.time()-t)
     import pydraw
     crs = pydraw.CoordinateSystem([-1,-1,11,11])
     img = pydraw.Image(400,400, crs=crs)

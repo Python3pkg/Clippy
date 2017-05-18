@@ -214,7 +214,7 @@ def clip_polygons(subject, clip, type):
     # sort by x asc, y asc (bottom to top), and right endpoints first
     Q = sorted(Q, key=lambda EP: (EP.x,EP.y,EP.left,EP.other.y))
     for q in Q:
-        print "sorted",q
+        print("sorted",q)
         
     # create the sweepline
     S = Sweepline()
@@ -223,7 +223,7 @@ def clip_polygons(subject, clip, type):
     raw = []
     while Q:
         endpoint = Q.pop(0)
-        print "processing",endpoint
+        print("processing",endpoint)
         if endpoint.left: # left endpoint
             # some lists
             S.insert(endpoint)
@@ -322,9 +322,9 @@ if __name__ == "__main__":
 
     def test_draw(testname, subjpoly, clippoly, mode):
         t = time.time()
-        print testname, mode
+        print(testname, mode)
         resultpolys = clip_polygons(subjpoly,clippoly,mode)
-        print "finished:",resultpolys,time.time()-t
+        print("finished:",resultpolys,time.time()-t)
         crs = pydraw.CoordinateSystem([-1,-1,11,11])
         img = pydraw.Image(300,300, crs=crs)
         img.drawpolygon(subjpoly, fillcolor=(222,0,0))
@@ -335,10 +335,10 @@ if __name__ == "__main__":
         img.view() #save("test_output/"+testname+"-"+mode+".png")
 
 
-    for testname,testclip in testpolys_normal.items():
-        print testname
+    for testname,testclip in list(testpolys_normal.items()):
+        print(testname)
         for mode in ("intersect","union","difference"):
-            print mode
+            print(mode)
             test_draw(testname, subjpoly, testclip, mode)
 
     

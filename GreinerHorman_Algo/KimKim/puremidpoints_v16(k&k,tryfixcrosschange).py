@@ -89,7 +89,7 @@ class Vertex(object):
 
     def copy(self):
         copy = Vertex(self)     # point coordinates of the vertex
-        copy.next = self.next        # reference to the next vertex of the polygon
+        copy.next = self.__next__        # reference to the next vertex of the polygon
         copy.prev = self.prev            # reference to the previous vertex of the polygon
         copy.neighbour = self.neighbour       # reference to the corresponding intersection vertex in the other polygon
         copy.entry = self.entry          # True if intersection is an entry point, False if exit
@@ -172,7 +172,7 @@ class Polygon(object):
         # position based on alpha
         curr = start
         while curr != end and curr.alpha < vertex.alpha:
-            curr = curr.next
+            curr = curr.__next__
 
         if vertex.xy == curr.prev.xy:
 ##            if vertex.xy == curr.xy: self.replace(curr, vertex)
@@ -196,7 +196,7 @@ class Polygon(object):
         """Return the next non intersecting vertex after the one specified."""
         c = v
         while c.intersect:
-            c = c.next
+            c = c.__next__
         return c
 
     @property
@@ -288,8 +288,8 @@ class Polygon(object):
             for c in clip.iter(): # for each vertex Cj of clip polygon do
                 try:
                     #print "find isect %s - %s and %s - %s" %(s.xy, self.next(s.next).xy, c.xy, clip.next(c.next).xy )
-                    i, alphaS, alphaC = intersect_or_on(s, self.next(s.next),
-                                                        c, clip.next(c.next))
+                    i, alphaS, alphaC = intersect_or_on(s, self.next(s.__next__),
+                                                        c, clip.next(c.__next__))
                     
                     iS = Vertex(i, alphaS, intersect=True, entry=False)
                     iC = Vertex(i, alphaC, intersect=True, entry=False)
@@ -297,8 +297,8 @@ class Polygon(object):
                     iS.neighbour = iC
                     iC.neighbour = iS
                     
-                    s_intsecs.append( (iS, alphaS, s, self.next(s.next)) )
-                    c_intsecs.append( (iC, alphaC, c, clip.next(c.next)) )
+                    s_intsecs.append( (iS, alphaS, s, self.next(s.__next__)) )
+                    c_intsecs.append( (iC, alphaC, c, clip.next(c.__next__)) )
      
                     anyintersection = True
                     
@@ -425,7 +425,7 @@ class Polygon(object):
             # intersection is degenerate, is the start/endpoint of a line
             # so maybe delete intersection flag based on prev/next locations
             prevloc = testLocation(c.prev, poly)
-            nextloc = testLocation(c.next, poly)
+            nextloc = testLocation(c.__next__, poly)
             if prevloc == "on" or nextloc == "on":
                 prevmid = Vertex(((c.x+c.prev.x)/2.0,(c.y+c.prev.y)/2.0))
                 prevloc = testLocation(prevmid, poly)
@@ -477,23 +477,23 @@ class Polygon(object):
                 # some modifications based on implementation in qt clipper source code
                 #if c.entry == "en/ex" == c.neighbour.entry or c.entry == "ex/en" == c.neighbour.entry:
                 if False: #c.entry == "en/ex" or c.entry == "ex/en":
-                    print "Maybe crosschange..."
+                    print("Maybe crosschange...")
                     # tri1
                     #a,b,c = c.neighbour.prev, c.prev, c.neighbour.next
-                    a,b,c = c.neighbour.next, c.prev, c.neighbour.prev
+                    a,b,c = c.neighbour.__next__, c.prev, c.neighbour.prev
                     dir1 = 0.5 * (a.x * (b.y-c.y) +
                                   b.x * (c.y-a.y) +
                                   c.x * (a.y-b.y))
                     # tri2
                     #a,b,c = c.neighbour.prev, c.prev, c.next
-                    a,b,c = c.next, c.prev, c.neighbour.prev
+                    a,b,c = c.__next__, c.prev, c.neighbour.prev
                     dir2 = 0.5 * (a.x * (b.y-c.y) +
                                   b.x * (c.y-a.y) +
                                   c.x * (a.y-b.y))
-                    print dir1,dir2
+                    print(dir1,dir2)
                     #if dir1 < 0 != dir2 < 0: # different orientation
                     if (dir1 * dir2) < 0: # different orientation means at least one negative, making the results less than 0
-                        print "CROSSCHANGE!!!"
+                        print("CROSSCHANGE!!!")
                         c.cross_change = True
                         c.neighbour.cross_change = True # not sure if should set neighbour too
 
@@ -505,9 +505,9 @@ class Polygon(object):
         # ...
 
         if False: #DEBUG:
-            print "view clip entries"
+            print("view clip entries")
             for c in clip.iter():
-                print c, c.entry
+                print(c, c.entry)
 
         # find first isect where both neighbours have valid flag
         for c in clip.iter():
@@ -526,9 +526,9 @@ class Polygon(object):
         
         # autoset subj, if neighbour of first is different, then set all as opposite
         # TODO: how deal with s_entry in case of different modes...?
-        print "view first"
-        print first_c, first_c.entry
-        print first_s, first_s.entry
+        print("view first")
+        print(first_c, first_c.entry)
+        print(first_s, first_s.entry)
         if first_c.entry != first_s.entry: # and s_entry: # this is the behaviour for standard intersect mode, otherwise flip, hence the s_entry
             for c in clip.iter():
                 if c.entry:
@@ -554,9 +554,9 @@ class Polygon(object):
                     prevsingle = s
 
         if False: #DEBUG:       
-            print "view subj entries"
+            print("view subj entries")
             for s in self.iter():
-                print s, s.entry
+                print(s, s.entry)
 
 
 
@@ -584,7 +584,7 @@ class Polygon(object):
                     else:
                         return vert
                 
-                vert = vert.next
+                vert = vert.__next__
                 
                 if vert == origvert:
                     # if returned to first, return None
@@ -667,7 +667,7 @@ class Polygon(object):
             cur.checked = True
             if stat == "D1":
                 clipped.add(Vertex(cur))
-                return cur.next
+                return cur.__next__
             elif stat == "D2":
                 clipped.add(Vertex(cur))
                 return cur.prev
@@ -682,16 +682,16 @@ class Polygon(object):
 
         while cur:
             # each new polygon
-            print "new poly"
+            print("new poly")
 
             stat = DeleteFlag1(cur, "D3")
-            if DEBUG: print "v", cur, cur.entry, stat
+            if DEBUG: print("v", cur, cur.entry, stat)
             clipped = Polygon()
             cur = proceed(cur, stat)
 
             # collect vertexes
             while cur != start:
-                if DEBUG: print "v", cur, cur.entry, stat
+                if DEBUG: print("v", cur, cur.entry, stat)
                 if cur.entry:
                     if stat == "D1" or stat == "D2":
                         stat = DeleteFlag2(cur, prev, stat)
@@ -703,7 +703,7 @@ class Polygon(object):
             # return to first vertex
             clipped.add(Vertex(clipped.first))
 
-            print clipped
+            print(clipped)
 
             resultpolys.append((clipped,[]))
             cur = prev = start = next_unprocessed(self.first)
@@ -738,7 +738,7 @@ class Polygon(object):
         s = self.first
         while True:
             yield s
-            s = s.next
+            s = s.__next__
             if s == self.first:
                 return
 
@@ -945,19 +945,19 @@ if __name__ == "__main__":
         img.save("test_output/"+testname+"-"+mode+".png")
 
     if not os.path.lexists("test_output"): os.mkdir("test_output")
-    for testname,testclip in testpolys_normal.items():
-        print testname
+    for testname,testclip in list(testpolys_normal.items()):
+        print(testname)
         for mode in ("intersect","union","difference"):
-            print mode
+            print(mode)
             test_draw(testname, subjpoly, testclip, mode)
-    for testname,testclip in testpolys_degens.items():
-        print testname
+    for testname,testclip in list(testpolys_degens.items()):
+        print(testname)
         for mode in ("intersect","union","difference"):
-            print mode
+            print(mode)
             test_draw(testname, subjpoly, testclip, mode)
-    for testname,testclip in testpolys_nextto_almostsame.items():
-        print testname
+    for testname,testclip in list(testpolys_nextto_almostsame.items()):
+        print(testname)
         for mode in ("intersect","union","difference"):
-            print mode
+            print(mode)
             test_draw(testname, subjpoly, testclip, mode)
     

@@ -48,7 +48,7 @@ class Polygon(object):
         s = self.first
         while True:
             yield s
-            s = s.next
+            s = s.__next__
             if s == self.first:
                 return
 
@@ -67,7 +67,7 @@ class Polygon(object):
             prev.next = vertex
 
     def replace(self, old, new):
-        new.next = old.next
+        new.next = old.__next__
         new.prev = old.prev
         old.prev.next = new
         old.next.prev = new
@@ -86,7 +86,7 @@ class Polygon(object):
         """
         curr = start
         while curr != end and curr.alpha < vertex.alpha:
-            curr = curr.next
+            curr = curr.__next__
 
         vertex.next = curr
         prev = curr.prev
@@ -259,7 +259,7 @@ def insert_intersections(subj, clip):
     c_intsecs = []
     for s in subj: # for each vertex Si of subject polygon do
         for c in clip: # for each vertex Cj of clip polygon do
-            intersection = lines_intersect(s, s.next, c, c.next)
+            intersection = lines_intersect(s, s.__next__, c, c.__next__)
             if intersection:
                 i, alphaS, alphaC = intersection
 
@@ -269,8 +269,8 @@ def insert_intersections(subj, clip):
                 iS.neighbour = iC
                 iC.neighbour = iS
                 
-                s_intsecs.append( (iS, s, s.next) )
-                c_intsecs.append( (iC, c, c.next) )
+                s_intsecs.append( (iS, s, s.__next__) )
+                c_intsecs.append( (iC, c, c.__next__) )
                         
         for iS,s,s_next in s_intsecs:
             subj.insert(iS, s, s_next)
@@ -296,7 +296,7 @@ def process_intersections(poly1, poly2, mode):
         if current.intersect:
             pre = current.intersect
             label_cases(current, mode)
-            if current.intersect != pre: print current
+            if current.intersect != pre: print(current)
             #Make sure current is still an intersection
             if current.intersect:
                 label_cases(current.neighbour, mode)
@@ -305,7 +305,7 @@ def process_intersections(poly1, poly2, mode):
                     current.intersect = False
         if current == poly1.first:
             flag = False
-        current = current.next #move to the next point
+        current = current.__next__ #move to the next point
 
 def clip(subject, constraint, mode):
 
@@ -317,8 +317,8 @@ def clip(subject, constraint, mode):
     #prepping process
     mark_locations(subject, constraint) #label vertices as inside or outside
     insert_intersections(subject, constraint) #find intersections
-    for s in subject: print s
-    for c in constraint: print c
+    for s in subject: print(s)
+    for c in constraint: print(c)
     process_intersections(subject, constraint, mode) #label intersections and entry or exit and possibly remove
 
     flag = True #loop flag
@@ -327,7 +327,7 @@ def clip(subject, constraint, mode):
     current = subject.first
     #loop through our polygon until we have found the first intersection
     while flag:
-        current = current.next
+        current = current.__next__
         #Either an intersection has been found or no intersections found
         if current.intersect or current == subject.first:
             flag = False
@@ -339,12 +339,12 @@ def clip(subject, constraint, mode):
         clipped.append((current.x,current.y))
         while flag:
             #Entry
-            print "Hmm",current
+            print("Hmm",current)
             if current.entry:
-                current = current.next
+                current = current.__next__
                 while not current.intersect:
                     clipped.append((current.x,current.y))
-                    current = current.next
+                    current = current.__next__
             #Exit
             else:
                 current = current.prev
@@ -512,12 +512,12 @@ if __name__ == "__main__":
         img.save("test_output/"+testname+"-"+mode+".png")
 
     if not os.path.lexists("test_output"): os.mkdir("test_output")
-    for testname,testclip in testpolys_normal.items():
+    for testname,testclip in list(testpolys_normal.items()):
         for mode in ("intersect","union","difference"):
             test_draw(testname, subjpoly, testclip, mode)
-    for testname,testclip in testpolys_degens.items():
+    for testname,testclip in list(testpolys_degens.items()):
         for mode in ("intersect","union","difference"):
             test_draw(testname, subjpoly, testclip, mode)
-    for testname,testclip in testpolys_nextto_almostsame.items():
+    for testname,testclip in list(testpolys_nextto_almostsame.items()):
         for mode in ("intersect","union","difference"):
             test_draw(testname, subjpoly, testclip, mode)

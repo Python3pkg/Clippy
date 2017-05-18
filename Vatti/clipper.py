@@ -38,14 +38,14 @@ from decimal import Decimal, getcontext
 getcontext().prec = 8
 horizontal = Decimal('-Infinity')
 
-class ClipType: (Intersection, Union, Difference, Xor) = range(4)
-class PolyType:    (Subject, Clip) = range(2)
-class PolyFillType: (EvenOdd, NonZero, Positive, Negative) = range(4)
-class JoinType: (Square, Round, Miter) = range(3)
-class EndType: (Closed, Butt, Square, Round) = range(4)
-class EdgeSide: (Left, Right) = range(2)
-class Protects: (Neither, Left, Right, Both) = range(4)
-class Direction: (LeftToRight, RightToLeft) = range(2)
+class ClipType: (Intersection, Union, Difference, Xor) = list(range(4))
+class PolyType:    (Subject, Clip) = list(range(2))
+class PolyFillType: (EvenOdd, NonZero, Positive, Negative) = list(range(4))
+class JoinType: (Square, Round, Miter) = list(range(3))
+class EndType: (Closed, Butt, Square, Round) = list(range(4))
+class EdgeSide: (Left, Right) = list(range(2))
+class Protects: (Neither, Left, Right, Both) = list(range(4))
+class Direction: (LeftToRight, RightToLeft) = list(range(2))
 
 Point = namedtuple('Point', 'x y')
 DoublePoint = namedtuple('DoublePoint', 'x y')
